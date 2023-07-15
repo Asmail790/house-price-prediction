@@ -5,15 +5,30 @@ import dash_bootstrap_components as dbc
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import pickle
-df = pd.read_csv('train.csv')
+import os
+import sys
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 
 reg:None | LinearRegression = None
-with open("predictor.p","rb") as f:
+
+file_path = resource_path("predictor.p")
+with open(file_path,"rb") as f:
     reg = pickle.load(f)
 
 
 
 app = Dash(__name__,external_stylesheets=[dbc.themes.DARKLY])
+flask_app =  app.server
 
 app.layout = html.Div([
     html.Div(children='Hello World'),
@@ -32,5 +47,14 @@ def update_graph(x):
     return f'estimated house cost: {y}'
     
 
+def create_app():
+   return flask_app
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
+
+
+
+
+
+   

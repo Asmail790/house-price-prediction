@@ -1,0 +1,1 @@
+pyinstaller  -F --add-data predictor.p:.  run.py
