@@ -1,6 +1,6 @@
 import os
 from waitress import serve
-import simple_dash as app # Import your app
+import house_price_predictor_app as app # Import your app
 
 # Run from the same directory as this script
 this_files_dir = os.path.dirname(os.path.abspath(__file__))
