@@ -163,3 +163,4 @@ cython_debug/
 # Own 
 train.csv
 exporter.py
+temp_good_info.md
