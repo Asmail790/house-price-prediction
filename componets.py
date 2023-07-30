@@ -1,81 +1,149 @@
+
+import os
+import sys
+
 import pandas as pd
 from dash import html, dcc, callback, Output, Input
-import plotly.express as px
-import plotly.graph_objects as go
+from dash_daq import BooleanSwitch
+import pickle
 
-from groups import DATAFIELDS_DESC, DESC_KEY, groups, COLUMNS
-from typing import Final
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PowerTransformer
 
-price_formatter = lambda price: f"Expected house price:{(price if price else '?')}$"
+from groups import DATAFIELDS_DESC, DESC_KEY,FIELD_TYPE,MAX,MIN,VALUES_DESC_KEY
 
-data = pd.DataFrame({g: [1, 2, 3, 4, 5] for g in COLUMNS})
-cofficents = pd.Series(
-    (i +
-     1 for i in range(
-         len(COLUMNS))),
-    index=(
-        g for g in COLUMNS))
-data = data.fillna(method="backfill") * cofficents.fillna(0)
-fig_effect_plot: Final = px.box(data, x=COLUMNS,)
-
-
-def __get_type(field_name: str):
-    return pd.Int64Dtype
-
-
-def create_attributes(group):
-    attributes: dict[str, dict[str, any]] = {}
-    for field in groups[group]:
-        field_type = __get_type(field)
-        if pd.api.types.is_numeric_dtype(field_type):
-            attributes[field] = dict(
-                type="number",
-                id=f'field-{field}',
-                required=True,
-                min=1,
-                value=data[field].mean()
-            )
-
-        elif pd.api.types.is_categorical_dtype(field_type):
-            pass
+def price_str(price):
+        if price is None:
+            return "Price:"
         else:
-            pass
-    return attributes
+            return f"Price:{price:.2f} $"
+     
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
-def create_group(group: str):
-    attributes = create_attributes(group)
+def load_model():
+    with open(resource_path("model.p"),"rb") as f:
+       model:LinearRegression = pickle.load(f)
+    return model 
+
+def load_transformers():
+    with open(resource_path("transformers.p"),"rb") as f:
+       transfomers:tuple[PowerTransformer,PowerTransformer] = pickle.load(f)
+    return transfomers 
+
+
+def load_defaults():
+    return pd.read_csv(resource_path("defaults.csv"), index_col=0)
+
+
+
+defaults_df = load_defaults()
+transformers = load_transformers()
+model = load_model()
+
+
+
+from itertools import groupby
+
+def create_inputs():
+    def get_type(field):
+        return DATAFIELDS_DESC[field][FIELD_TYPE]
+    
+    def get_drop_down_values(field):
+        return DATAFIELDS_DESC[field][VALUES_DESC_KEY].values()
+    
+    def get_description(field):
+        return DATAFIELDS_DESC[field][DESC_KEY]
+
     children: list[html.Div] = []
 
-    for field in groups[group]:
-        children.append(html.Div([
-            html.Label(DATAFIELDS_DESC[field][DESC_KEY]),
-            dcc.Input(**attributes[field])
-        ], style={
+    fields = defaults_df.columns
+
+
+    fields_sorted_by_type = sorted(fields,key=get_type)
+    field_grouped_by_type = groupby(fields_sorted_by_type ,key=get_type)
+    field_grouped_by_type = {k:list(g) for k, g in field_grouped_by_type}
+
+    if "checkbox" in field_grouped_by_type:
+        for field  in field_grouped_by_type["checkbox"]:
+            componet = BooleanSwitch(
+                on=defaults_df[field].iloc[0],
+                label=get_description(field),
+                labelPosition="top",
+                id=field
+            )
+            children.append(componet)
+    
+
+    if "number" in field_grouped_by_type:
+        for field in field_grouped_by_type["number"]:
+            attributes = {"type":"number", "value":defaults_df[field].iloc[0]}
+
+
+            if MAX in DATAFIELDS_DESC[field]:
+                attributes["max"] = DATAFIELDS_DESC[field][MAX]  
+
+            if MIN in DATAFIELDS_DESC[field]:
+                attributes["min"] = DATAFIELDS_DESC[field][MIN] 
+                         
+
+            componet = dcc.Input(**attributes, id=field)
+
+            wrapper = html.Div([
+                html.Label(get_description(field)),
+                componet
+            ],
+            style={
             "display": "flex",
             "flex-direction": "column"
-        }))
+            })
+            
+            children.append(wrapper)
+    
+    if "dropdown" in field_grouped_by_type:
+         
+        for field in field_grouped_by_type["dropdown"]:
+            
+            default_index = int(defaults_df[field].iloc[0])
+
+            options = list(get_drop_down_values(field))
+            componet = dcc.Dropdown(options,options[default_index] ,id=field ) 
+            
+            wrapper = html.Div([
+                html.Label(get_description(field)),
+                componet
+            ],
+            style={
+            "display": "flex",
+            "flex-direction": "column"
+            })
+
+            children.append(wrapper)
 
     attributes = html.Div(children=children, style={
         "display": "flex",
-        "flex-direction": "column",
+        "flex-direction": "row",
         "flex-wrap": "nowrap",
         "justify-content": "space-around",
-        "height": "100%",
+        "margin":"30px"
     })
 
-    return html.Div(children=[html.H1(group), attributes], style={
-        "display": "flex",
-        "flex-direction": "column",
-        "flex-wrap": "nowrap",
-        "justify-content": "start",
-    })
+    return attributes
 
 
-def create_groups():
+"""def create_inputs():
     group_componets: list[html.Div] = []
     for group_name in groups:
-        group = create_group(group_name)
+        group = create_group(groups[group_name],group_name,defaults)
         group_componets.append(group)
 
     return html.Div(children=group_componets, style={
@@ -85,67 +153,48 @@ def create_groups():
         "flex-wrap": "nowrap",
         "margin-bottom": "50px"
     })
-
+"""
 
 def house_price():
-
     return html.Div(
-        html.H2(price_formatter(None), id="house-price"),
+        html.H2("", id="house-price"),
         style={
             "display": "flex",
             "flex-direction": "col",
             "justify-content": "center",
             "flex-wrap": "nowrap",
-            "margin-bottom": "50px"
         }
     )
 
 
-def graph():
-    return dcc.Graph(figure=fig_effect_plot, id='example-graph')
-
-
-@callback(
-    Output(component_id='example-graph', component_property='figure'),
-    inputs={col: Input(component_id=f'field-{col}', component_property='value')
-            for col in COLUMNS
-            }
-)
-def update_striplot(**kwargs):
-
-    # TODO make as decorator
-    if any(map(lambda x: x is None, kwargs.values())):
-        return go.Figure()
-
-    df = pd.DataFrame(data=kwargs, index=kwargs.keys())
-
-    strip_plot = px.strip(df, x=COLUMNS).update_traces(
-        jitter=0,
-        marker=dict(
-            color="red",
-            symbol="circle"
-        ),
-    )
-    fig = go.Figure(data=strip_plot.data + fig_effect_plot.data)
-    return fig.update_layout(
-        title_text='Effect plot',
-        title_x=0.5,
-        font_size=20,
-        xaxis_title="Sale Price $",
-        yaxis_title="Properties",
-        hovermode=False
-        )
+inputs1={col: Input(component_id=f'{col}', component_property='value') for col in defaults_df.columns if defaults_df[col].dtype != bool}
+inputs2 = {col: Input(component_id=f'{col}', component_property='on') for col in defaults_df.columns if defaults_df[col].dtype == bool}
 
 
 @callback(
     Output(component_id='house-price', component_property='children'),
-    inputs={col: Input(component_id=f'field-{col}', component_property='value')
-            for col in COLUMNS
-            }
-)
+    inputs={**inputs1,**inputs2}
+
+    )
 def update_price(**kwargs):
-    if any(map(lambda x: x is None, kwargs.values())):
-        return "?"
+    kwargs = {k:[v] for k,v in kwargs.items()}
+  
+
+    if any(map(lambda x: x[0] is None, kwargs.values())):
+        return "Fill in all inputs"
     else:
-        estimiated_price = sum(kwargs.values())
-        return price_formatter(estimiated_price)
+        price = predict_price(kwargs)
+        return price_str(price)
+
+#TODO check why so high price for bath_room
+def predict_price(data:dict):
+    df = pd.DataFrame(data)
+    df = df[defaults_df.columns]
+    matrix = df.to_numpy()
+    x_transformer = transformers[0]
+    y_transformer = transformers[1]
+    matrix = x_transformer.transform(matrix)
+    y = model.predict(matrix)
+    predict_price = y_transformer.inverse_transform(y)
+    
+    return predict_price.squeeze().item()

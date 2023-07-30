@@ -1,1 +1,1 @@
-pyinstaller  -F --add-data predictor.p:.  run.py
+pyinstaller  -F --add-data resources:. --collect-data dash_daq --paths /home/main/Desktop/tabort/matplotlib_web/env/lib/python3.10/site-packages:. run.py 

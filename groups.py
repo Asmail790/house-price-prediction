@@ -1,6 +1,9 @@
 DESC_KEY = "desc"
 VALUES_DESC_KEY = "values"
 LABEL_KEY = "label"
+MIN = "min"
+MAX = "max"
+FIELD_TYPE = "type" 
 
 DATAFIELDS_DESC = {
     "MSSubClass": {
@@ -215,8 +218,8 @@ DATAFIELDS_DESC = {
     },
     "YearBuilt": {
         DESC_KEY: "Original construction date",
-        VALUES_DESC_KEY: {
-        }
+        FIELD_TYPE:"number",
+        MIN:1900
     },
     "YearRemodAdd": {
         DESC_KEY: "Remodel date (same as construction date if no remodeling or additions)",
@@ -342,8 +345,8 @@ DATAFIELDS_DESC = {
     },
     "BsmtQual": {
         DESC_KEY: "Evaluates the height of the basement",
+        FIELD_TYPE:"dropdown",
         VALUES_DESC_KEY: {
-
             "Ex": "Excellent (100+ inches)",
             "Gd": "Good (90-99 inches)",
             "TA": "Typical (80-89 inches)",
@@ -411,7 +414,9 @@ DATAFIELDS_DESC = {
     },
 
     "TotalBsmtSF": {
-        DESC_KEY: "Total square feet of basement area",
+        DESC_KEY: "Size of basement area in square feet",
+        FIELD_TYPE:"number",
+        MIN:0
     },
 
     "Heating": {
@@ -466,7 +471,9 @@ DATAFIELDS_DESC = {
     },
 
     "GrLivArea": {
-        DESC_KEY: "Above grade (ground) living area square feet",
+        DESC_KEY: "Size of above grade (ground) living area in square feet",
+        FIELD_TYPE:"number",
+        MIN:0
     },
 
     "BsmtFullBath": {
@@ -505,6 +512,9 @@ DATAFIELDS_DESC = {
     },
     "TotRmsAbvGrd": {
         DESC_KEY: "Total rooms above grade (does not include bathrooms)",
+        FIELD_TYPE:"number",
+        MAX:14,
+        MIN:1
     },
     "Functional": {
         DESC_KEY: "Home functionality (Assume typical unless deductions are warranted)",
@@ -567,6 +577,8 @@ DATAFIELDS_DESC = {
 
     "GarageArea": {
         DESC_KEY: "Size of garage in square feet",
+        FIELD_TYPE:"number",
+        MIN:0
     },
 
     "GarageQual": {
@@ -693,27 +705,44 @@ DATAFIELDS_DESC = {
             "Family": "Sale between family members",
             "Partial": "Home was not completed when last assessed (associated with New Homes)",
         }
+    },
+
+    "have_Fireplace": {
+        DESC_KEY: "Have a fire place",
+        FIELD_TYPE:"checkbox",
+        VALUES_DESC_KEY:{
+            "Yes":1,
+            "No":0 
+        }
+     },
+    "have_WoodDeck": {
+        DESC_KEY: "Have a wood deck",
+        FIELD_TYPE:"checkbox",
+        VALUES_DESC_KEY:{
+            "Yes":1,
+            "No":0 
+        }
+    },
+    "have_Porch": {
+        DESC_KEY: "Have a porch",
+        FIELD_TYPE:"checkbox",
+        VALUES_DESC_KEY:{
+            "Yes":1,
+            "No":0 
+        }
+    },
+    "have_Garage": {
+        DESC_KEY: "Garage exist",
+        FIELD_TYPE:"checkbox",
+        VALUES_DESC_KEY:{
+            "Yes":1,
+            "No":0 
+        }
+    },
+    "total_Bath": {
+        DESC_KEY: "Total number of bathrooms",
+        FIELD_TYPE:"number",
+        MIN:1,
+        MAX:10
     }
 }
-
-groups = {
-    "Garage": {
-        "GarageCars",
-        "GarageArea",
-    },
-    "Basement": {
-        "TotalBsmtSF",
-        "BsmtExposure",
-        "BsmtQual",
-    },
-    "Other Properties": {
-        "YearBuilt",
-        "GrLivArea",
-        "TotRmsAbvGrd",
-        "Fireplaces",
-        "YearBuilt",
-        "FullBath",
-    }
-}
-
-COLUMNS = list({ col for col_group in groups for col in groups[col_group]})
