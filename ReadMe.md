@@ -16,7 +16,7 @@ The model is based on Scikit-Learn and uses 8 inputs:
 - Original construction date.
 - Total number of bathrooms.
 
-####  Build on linux
+####  Build the web app (on linux)
 run `./create_app.sh`
 
 #### Run the web app
